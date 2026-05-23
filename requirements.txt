@@ -1,0 +1,11 @@
+fastapi==0.116.0
+uvicorn==0.35.0
+SQLAlchemy==2.0.42
+APScheduler==3.11.0
+requests==2.32.4
+pydantic>=2.11,<3
+pytest==8.4.1
+httpx==0.28.1
+
+
+
