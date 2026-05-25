@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import platform
+import re
 import socket
+import subprocess
 import time
 from dataclasses import dataclass
 
@@ -72,4 +75,50 @@ def tcp_check(target: str, timeout_sec: int) -> CheckResult:
         return CheckResult(False, "offline", None, None, str(exc))
     finally:
         sock.close()
+
+
+def ping_check(target: str, timeout_sec: int) -> CheckResult:
+    host = target.strip()
+    if not host:
+        return CheckResult(False, "abnormal", None, None, "target host is empty")
+
+    timeout_ms = max(1000, int(timeout_sec * 1000))
+    if platform.system().lower().startswith("win"):
+        cmd = ["ping", "-n", "1", "-w", str(timeout_ms), host]
+    else:
+        timeout_arg = str(max(1, int(timeout_sec)))
+        cmd = ["ping", "-c", "1", "-W", timeout_arg, host]
+
+    start = time.perf_counter()
+    try:
+        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec + 2)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return CheckResult(False, "offline", None, None, str(exc))
+
+    latency_ms = (time.perf_counter() - start) * 1000
+    output = f"{completed.stdout}\n{completed.stderr}"
+    parsed = _parse_ping_latency(output)
+    if parsed is not None:
+        latency_ms = parsed
+
+    if completed.returncode == 0:
+        status = "online" if latency_ms <= timeout_sec * 1000 else "slow"
+        return CheckResult(True, status, latency_ms, None, None)
+    return CheckResult(False, "offline", None, None, output.strip() or "ping failed")
+
+
+def _parse_ping_latency(output: str) -> float | None:
+    lower = output.lower()
+    if "time<" in lower:
+        return 1.0
+
+    match_ms = re.search(r"time[=<]\s*([0-9.]+)\s*ms", lower)
+    if match_ms:
+        return float(match_ms.group(1))
+
+    match_time = re.search(r"time[=<]\s*([0-9.]+)", lower)
+    if match_time:
+        return float(match_time.group(1))
+    return None
+
 

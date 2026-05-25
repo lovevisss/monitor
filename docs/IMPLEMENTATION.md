@@ -29,10 +29,12 @@
 - 存储：SQLAlchemy + SQLite（默认）/MySQL（生产）
 - 检测方式：HTTP/HTTPS + TCP
 - 告警：当前为统一抽象接口（可接企业微信/钉钉/邮箱）
+- 鉴权：管理员 JWT 登录鉴权
+- 审计：配置变更写入 `audit_log`
 
 系统分层：
 
-1. 展示层：前端监控大盘（本实现先提供 API）
+1. 展示层：Vue3 + Element Plus + ECharts 监控大盘
 2. 服务层：配置管理、查询统计、权限扩展点
 3. 采集层：HTTP/TCP 检测、关键词校验、状态判定
 4. 存储层：服务配置、巡检日志、告警日志
@@ -73,6 +75,24 @@
 - `recovered_at`
 - `alert_status`: `active` / `closed`
 
+### 3.4 `admin_user`
+
+- `id`
+- `username`
+- `password_hash`
+- `is_active`
+- `created_at` / `updated_at`
+
+### 3.5 `audit_log`
+
+- `id`
+- `admin_username`
+- `action`
+- `target_type`
+- `target_id`
+- `detail`
+- `created_at`
+
 ## 4. 状态判定规则
 
 - `online`：探测成功，延时 <= timeout
@@ -97,6 +117,11 @@
 - `GET /api/monitor/logs`：巡检日志查询
 - `GET /api/alerts`：告警记录查询
 - `GET /api/dashboard/overview`：总览统计
+- `GET /api/dashboard/service-status`：每个服务的最新状态快照
+- `POST /api/auth/login`：管理员登录
+- `GET /api/auth/me`：管理员身份校验
+- `POST /api/auth/change-password`：管理员改密
+- `GET /api/audit-logs`：操作审计查询
 
 ## 6. 部署说明（校园内网）
 
@@ -111,9 +136,22 @@ Set-Location "C:\Users\Administrator\PycharmProjects\jiankong"
 ### 6.2 生产建议
 
 - 运行于校园内网主机
-- 使用 MySQL 替换 SQLite
+- 使用 MySQL（`10.1.12.162` / `jiankong`）替换 SQLite
 - 使用 `Nginx + uvicorn` 方式部署
 - 启用日志轮转与数据库备份
+
+### 6.3 本项目 MySQL 初始化
+
+- 初始化脚本：`docs/MYSQL_INIT.sql`
+- 部署说明：`docs/MYSQL_DEPLOY.md`
+
+### 6.4 前端大盘运行
+
+```powershell
+Set-Location "C:\Users\Administrator\PycharmProjects\jiankong\frontend"
+npm install
+npm run dev
+```
 
 ## 7. 实施计划
 

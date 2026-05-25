@@ -8,7 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 
 from app.alerting import create_down_alert, create_recovered_alert, emit_notification, should_send_down_alert
-from app.checkers import CheckResult, http_check, tcp_check
+from app.checkers import CheckResult, http_check, ping_check, tcp_check
 from app.database import SessionLocal
 from app.models import MonitorLog, Service
 
@@ -57,6 +57,8 @@ class MonitorEngine:
     def _check_service(service: Service) -> CheckResult:
         if service.check_type == "http":
             return http_check(service.target, service.timeout_sec, service.keyword)
+        if service.check_type == "ping":
+            return ping_check(service.target, service.timeout_sec)
         return tcp_check(service.target, service.timeout_sec)
 
     @staticmethod
