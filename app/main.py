@@ -255,6 +255,22 @@ def run_service_once(
     return result.__dict__
 
 
+@app.post("/api/services/run-all-now")
+def run_all_services_now(
+    db: Session = Depends(get_db),
+    current_admin: AdminUser = Depends(get_current_admin),
+):
+    summary = engine.run_all_enabled()
+    write_audit_log(
+        db,
+        current_admin,
+        action="run_all_services_now",
+        target_type="service_batch",
+        detail=f"processed={summary['processed']},success={summary['success']},failed={summary['failed']}",
+    )
+    return summary
+
+
 @app.get("/api/monitor/logs", response_model=list[MonitorLogOut])
 def list_monitor_logs(
     db: Session = Depends(get_db),

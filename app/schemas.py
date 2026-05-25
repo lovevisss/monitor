@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ServiceBase(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     target: str = Field(min_length=1, max_length=512)
-    check_type: str = Field(pattern="^(http|tcp|ping)$")
+    check_type: str = Field(pattern="^(http|tcp|ping|zufe_route)$")
     keyword: str | None = None
     tags: str | None = Field(default=None, max_length=512)
     interval_sec: int = Field(default=60, ge=10, le=3600)
@@ -23,7 +23,7 @@ class ServiceCreate(ServiceBase):
 class ServiceUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=128)
     target: str | None = Field(default=None, min_length=1, max_length=512)
-    check_type: str | None = Field(default=None, pattern="^(http|tcp|ping)$")
+    check_type: str | None = Field(default=None, pattern="^(http|tcp|ping|zufe_route)$")
     keyword: str | None = None
     tags: str | None = Field(default=None, max_length=512)
     interval_sec: int | None = Field(default=None, ge=10, le=3600)

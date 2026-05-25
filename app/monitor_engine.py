@@ -8,7 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 
 from app.alerting import create_down_alert, create_recovered_alert, emit_notification, should_send_down_alert
-from app.checkers import CheckResult, http_check, ping_check, tcp_check
+from app.checkers import CheckResult, http_check, ping_check, tcp_check, zufe_route_check
 from app.database import SessionLocal
 from app.models import MonitorLog, Service
 
@@ -59,7 +59,26 @@ class MonitorEngine:
             return http_check(service.target, service.timeout_sec, service.keyword)
         if service.check_type == "ping":
             return ping_check(service.target, service.timeout_sec)
+        if service.check_type == "zufe_route":
+            return zufe_route_check(service.target, service.timeout_sec)
         return tcp_check(service.target, service.timeout_sec)
+
+    def run_all_enabled(self) -> dict[str, int]:
+        processed = 0
+        success = 0
+        failed = 0
+        with SessionLocal() as db:
+            services = db.query(Service).filter(Service.enabled.is_(True)).all()
+            for service in services:
+                result = self.run_once(service.id)
+                if result is None:
+                    continue
+                processed += 1
+                if result.is_success:
+                    success += 1
+                else:
+                    failed += 1
+        return {"processed": processed, "success": success, "failed": failed}
 
     @staticmethod
     def _save_monitor_log(db: Session, service: Service, result: CheckResult) -> None:

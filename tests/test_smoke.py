@@ -51,9 +51,25 @@ def test_service_crud_and_run_once() -> None:
         assert ping_create_resp.status_code == 200
         ping_id = ping_create_resp.json()["id"]
 
+        route_payload = {
+            "name": f"zufe-route-check-{uuid.uuid4().hex[:8]}",
+            "target": "www.zufe.edu.cn",
+            "check_type": "zufe_route",
+            "interval_sec": 60,
+            "timeout_sec": 5,
+            "enabled": False,
+        }
+        route_create_resp = client.post("/api/services", json=route_payload, headers=headers)
+        assert route_create_resp.status_code == 200
+        route_id = route_create_resp.json()["id"]
+
         run_resp = client.post(f"/api/services/{service_id}/run-now", headers=headers)
         assert run_resp.status_code == 200
         assert "is_success" in run_resp.json()
+
+        run_all_resp = client.post("/api/services/run-all-now", headers=headers)
+        assert run_all_resp.status_code == 200
+        assert "processed" in run_all_resp.json()
 
         update_resp = client.put(
             f"/api/services/{service_id}",
@@ -121,5 +137,9 @@ def test_service_crud_and_run_once() -> None:
         ping_delete_resp = client.delete(f"/api/services/{ping_id}", headers=headers)
         assert ping_delete_resp.status_code == 200
         assert ping_delete_resp.json()["deleted"] is True
+
+        route_delete_resp = client.delete(f"/api/services/{route_id}", headers=headers)
+        assert route_delete_resp.status_code == 200
+        assert route_delete_resp.json()["deleted"] is True
 
 

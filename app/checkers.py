@@ -107,6 +107,25 @@ def ping_check(target: str, timeout_sec: int) -> CheckResult:
     return CheckResult(False, "offline", None, None, output.strip() or "ping failed")
 
 
+def zufe_route_check(target: str, timeout_sec: int) -> CheckResult:
+    host = (target.strip() or "www.zufe.edu.cn").replace("http://", "").replace("https://", "").strip("/")
+    start = time.perf_counter()
+    try:
+        _, _, ip_list = socket.gethostbyname_ex(host)
+    except OSError as exc:
+        return CheckResult(False, "offline", None, None, str(exc))
+
+    latency_ms = (time.perf_counter() - start) * 1000
+    ips = sorted(set(ip_list))
+    if any(ip.startswith("172.") for ip in ips):
+        status = "online" if latency_ms <= timeout_sec * 1000 else "slow"
+        return CheckResult(True, status, latency_ms, None, f"internal route resolved: {','.join(ips)}")
+    if any(ip.startswith("202.") for ip in ips):
+        return CheckResult(False, "offline", latency_ms, None, f"external route resolved: {','.join(ips)}")
+
+    return CheckResult(False, "abnormal", latency_ms, None, f"unexpected route resolved: {','.join(ips)}")
+
+
 def _parse_ping_latency(output: str) -> float | None:
     lower = output.lower()
     if "time<" in lower:

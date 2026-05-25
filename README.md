@@ -43,6 +43,8 @@ Open:
 Frontend operation menus:
 - `总览`: status chart, latency chart, alert list
 - `服务管理`: add/edit/delete services, set tags, filter by tag, run-now checks, history, and maintenance diary
+- `服务管理`: supports one-click patrol for all enabled services
+- Monitoring types include `http`, `tcp`, `ping`, and `zufe_route` (www.zufe.edu.cn route health)
 - `告警配置`: WeCom/DingTalk/Email alert settings + one-click test alert
 - `系统配置`: runtime settings (persisted to `config/settings.json`)
 
@@ -108,4 +110,5 @@ Protected APIs (require `Authorization: Bearer <token>`):
 - `PUT /api/services/{service_id}`
 - `DELETE /api/services/{service_id}`
 - `POST /api/services/{service_id}/run-now`
+- `POST /api/services/run-all-now`
 

@@ -217,6 +217,23 @@ body {
   background: #f7faff;
 }
 
+.channel-panel .el-form-item__label,
+.channel-panel .el-form-item__content,
+.channel-panel .el-input__inner,
+.channel-panel .el-textarea__inner,
+.channel-panel .el-select__placeholder,
+.channel-panel .el-input__inner::placeholder {
+  color: #eaf3ff !important;
+}
+
+.channel-panel .el-input__wrapper,
+.channel-panel .el-textarea__inner,
+.channel-panel .el-select__wrapper,
+.channel-panel .el-input-number {
+  background: rgba(20, 39, 72, 0.9) !important;
+  border-color: rgba(120, 167, 228, 0.45) !important;
+}
+
 @media (max-width: 1100px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(150px, 1fr));

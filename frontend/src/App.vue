@@ -20,6 +20,7 @@ import {
   getStoredToken,
   loginAdmin,
   runNow,
+  runAllNow,
   sendTestAlert,
   setStoredToken,
   updateService,
@@ -61,12 +62,12 @@ const currentServiceName = ref("");
 const historyRows = ref([]);
 const maintenanceRows = ref([]);
 const maintenanceContent = ref("");
+const serviceTagSelection = ref([]);
 const serviceForm = reactive({
   name: "",
   check_type: "http",
   target: "",
   keyword: "",
-  tags: "",
   interval_sec: 60,
   timeout_sec: 10,
   enabled: true,
@@ -127,16 +128,22 @@ function parseTags(raw) {
 
 function resetServiceForm() {
   editingServiceId.value = null;
+  serviceTagSelection.value = [];
   Object.assign(serviceForm, {
     name: "",
     check_type: "http",
     target: "",
     keyword: "",
-    tags: "",
     interval_sec: 60,
     timeout_sec: 10,
     enabled: true,
   });
+}
+
+function onCheckTypeChange(value) {
+  if (value === "zufe_route" && !serviceForm.target) {
+    serviceForm.target = "www.zufe.edu.cn";
+  }
 }
 
 function openCreateServiceDialog() {
@@ -154,12 +161,12 @@ function openEditServiceDialog(row) {
     return;
   }
   editingServiceId.value = row.service_id;
+  serviceTagSelection.value = parseTags(row.tags);
   Object.assign(serviceForm, {
     name: row.name,
     check_type: row.check_type,
     target: row.target,
     keyword: row.keyword || "",
-    tags: row.tags || "",
     interval_sec: row.interval_sec || 60,
     timeout_sec: row.timeout_sec || 10,
     enabled: row.enabled,
@@ -270,7 +277,11 @@ async function saveService() {
   }
   saving.value = true;
   try {
-    const payload = { ...serviceForm, keyword: serviceForm.keyword || null };
+    const payload = {
+      ...serviceForm,
+      keyword: serviceForm.keyword || null,
+      tags: serviceTagSelection.value.join(",") || null,
+    };
     if (editingServiceId.value) {
       await updateService(editingServiceId.value, payload);
       ElMessage.success("服务更新成功");
@@ -316,6 +327,20 @@ async function triggerRunNow(row) {
     await loadAll();
   } catch (error) {
     ElMessage.error(`执行失败: ${error.response?.data?.detail || error.message || "unknown"}`);
+  }
+}
+
+async function triggerRunAllNow() {
+  if (!isLoggedIn.value) {
+    loginVisible.value = true;
+    return;
+  }
+  try {
+    const resp = await runAllNow();
+    ElMessage.success(`一键巡检完成：共处理 ${resp.data.processed} 个服务`);
+    await loadAll();
+  } catch (error) {
+    ElMessage.error(`一键巡检失败: ${error.response?.data?.detail || error.message || "unknown"}`);
   }
 }
 
@@ -517,6 +542,7 @@ onUnmounted(() => {
             <el-select v-model="selectedTag" clearable placeholder="按标签筛选" style="width: 200px; margin-right: 10px">
               <el-option v-for="tag in availableTags" :key="tag" :label="tag" :value="tag" />
             </el-select>
+            <el-button style="margin-right: 10px" type="success" plain @click="triggerRunAllNow">一键巡检</el-button>
             <el-button type="primary" @click="openCreateServiceDialog">新增服务</el-button>
             <el-button @click="loadAll">刷新</el-button>
           </div>
@@ -548,7 +574,7 @@ onUnmounted(() => {
     </template>
 
     <template v-else-if="activeMenu === 'alerts'">
-      <section class="panel">
+      <section class="panel channel-panel">
         <h3>告警渠道配置</h3>
         <el-form label-width="170px" style="max-width: 900px">
           <el-form-item label="企业微信 Webhook"><el-input v-model="settingsForm.alert_webhook_wechat" /></el-form-item>
@@ -597,15 +623,35 @@ onUnmounted(() => {
       <el-form label-width="110px">
         <el-form-item label="服务名称"><el-input v-model="serviceForm.name" /></el-form-item>
         <el-form-item label="监控类型">
-          <el-select v-model="serviceForm.check_type" style="width: 100%">
+          <el-select v-model="serviceForm.check_type" style="width: 100%" @change="onCheckTypeChange">
             <el-option label="HTTP/HTTPS" value="http" />
             <el-option label="TCP" value="tcp" />
             <el-option label="PING" value="ping" />
+            <el-option label="本部光路测试" value="zufe_route" />
           </el-select>
         </el-form-item>
-        <el-form-item label="监控地址"><el-input v-model="serviceForm.target" /></el-form-item>
+        <el-form-item label="监控地址">
+          <el-input
+            v-model="serviceForm.target"
+            :placeholder="serviceForm.check_type === 'zufe_route' ? 'www.zufe.edu.cn' : '请输入URL或IP:端口'"
+          />
+        </el-form-item>
         <el-form-item v-if="serviceForm.check_type === 'http'" label="关键词"><el-input v-model="serviceForm.keyword" /></el-form-item>
-        <el-form-item label="标签(逗号分隔)"><el-input v-model="serviceForm.tags" placeholder="如：教务,核心,选课周" /></el-form-item>
+        <el-form-item label="标签">
+          <el-select
+            v-model="serviceTagSelection"
+            multiple
+            filterable
+            allow-create
+            collapse-tags
+            collapse-tags-tooltip
+            default-first-option
+            placeholder="选择已有标签或输入新标签"
+            style="width: 100%"
+          >
+            <el-option v-for="tag in availableTags" :key="`select-${tag}`" :label="tag" :value="tag" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="巡检间隔(s)"><el-input-number v-model="serviceForm.interval_sec" :min="10" :max="3600" /></el-form-item>
         <el-form-item label="超时(s)"><el-input-number v-model="serviceForm.timeout_sec" :min="1" :max="120" /></el-form-item>
         <el-form-item label="启用"><el-switch v-model="serviceForm.enabled" /></el-form-item>

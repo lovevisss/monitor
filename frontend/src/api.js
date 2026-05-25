@@ -76,6 +76,10 @@ export function runNow(serviceId) {
   return client.post(`/api/services/${serviceId}/run-now`);
 }
 
+export function runAllNow() {
+  return client.post("/api/services/run-all-now");
+}
+
 export function createService(payload) {
   return client.post("/api/services", payload);
 }
